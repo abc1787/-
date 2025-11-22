@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微信转盘抽奖</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 400px;
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 30px 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .chance-info {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .wheel-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto 25px;
+        }
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                #ff9500 0deg 60deg,
+                #ff2d55 60deg 120deg,
+                #5856d6 120deg 180deg,
+                #34c759 180deg 240deg,
+                #007bff 240deg 300deg,
+                #af52de 300deg 360deg
+            );
+            position: relative;
+            overflow: hidden;
+            transition: transform 4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+        .wheel::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            background-color: #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            border: 3px solid #f0f0f0;
+        }
+        .prize-text {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 5;
+        }
+        .prize-text span {
+            position: absolute;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            transform-origin: bottom center;
+            width: 30px;
+            left: 135px;
+            text-align: center;
+            height: 150px;
+            line-height: 280px; /* 垂直位置微调 */
+        }
+        .pointer {
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 30px solid #ff3b30;
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            filter: drop-shadow(0 3px 2px rgba(0,0,0,0.2));
+        }
+        #spin-btn {
+            background-color: #ff3b30;
+            color: white;
+            border: none;
+            width: 120px;
+            height: 45px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(255,59,48,0.3);
+        }
+        #spin-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        #spin-btn:not(:disabled):active {
+            transform: scale(0.95);
+        }
+        .result-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .result-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            width: 80%;
+            max-width: 300px;
+            transform: translateY(-50px);
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .result-modal.active .modal-content {
+            transform: translateY(0);
+        }
+        .modal-content h2 {
+            color: #ff3b30;
+            margin-top: 0;
+            font-size: 22px;
+        }
+        .modal-content p {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 25px;
+        }
+        .modal-content button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .modal-content button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>幸运大转盘</h1>
+        <p class="chance-info">您还有 <strong id="chance-count">2</strong> 次抽奖机会</p>
+        
+        <div class="wheel-container">
+            <div class="wheel" id="wheel">
+                <div class="prize-text">
+                    <span style="transform: rotate(0deg);">1</span>
+                    <span style="transform: rotate(60deg);">2</span>
+                    <span style="transform: rotate(120deg);">3</span>
+                    <span style="transform: rotate(180deg);">4</span>
+                    <span style="transform: rotate(240deg);">5</span>
+                    <span style="transform: rotate(300deg);">6</span>
+                </div>
+            </div>
+            <div class="pointer"></div>
+        </div>
+        
+        <button id="spin-btn">开始抽奖</button>
+    </div>
+
+    <div class="result-modal" id="result-modal">
+        <div class="modal-content">
+            <h2>恭喜您！</h2>
+            <p>您获得了奖品 <strong id="prize-result">1</strong> 等奖！</p>
+            <button id="close-modal">确定</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const wheel = document.getElementById('wheel');
+            const spinBtn = document.getElementById('spin-btn');
+            const resultModal = document.getElementById('result-modal');
+            const closeModalBtn = document.getElementById('close-modal');
+            const prizeResult = document.getElementById('prize-result');
+            const chanceCountEl = document.getElementById('chance-count');
+
+            let chances = 2;
+            let isSpinning = false;
+
+            // 定义每个奖品对应的角度范围 (0-360度)
+            // 转盘被分成6个部分，每部分60度
+            const prizeAngles = [
+                { min: 330, max: 360, prize: 1 }, // 1等奖
+                { min: 0, max: 30, prize: 1 },   // 1等奖
+                { min: 30, max: 90, prize: 2 },  // 2等奖
+                { min: 90, max: 150, prize: 3 }, // 3等奖
+                { min: 150, max: 210, prize: 4 }, // 4等奖
+                { min: 210, max: 270, prize: 5 }, // 5等奖
+                { min: 270, max: 330, prize: 6 }  // 6等奖
+            ];
+            
+            // 计算最终停止位置对应的奖品
+            const getPrize = (finalAngle) => {
+                // 因为转盘是顺时针旋转，所以需要用360减去最终角度的余数，得到相对于初始位置的角度
+                const normalizedAngle = (360 - (finalAngle % 360)) % 360;
+                
+                for (const zone of prizeAngles) {
+                    if (normalizedAngle >= zone.min && normalizedAngle < zone.max) {
+                        return zone.prize;
+                    }
+                }
+                return 6; // 默认值
+            };
+
+            spinBtn.addEventListener('click', () => {
+                if (isSpinning || chances <= 0) return;
+
+                isSpinning = true;
+                spinBtn.disabled = true;
+                
+                // 减少抽奖次数
+                chances--;
+                chanceCountEl.textContent = chances;
+
+                // 计算一个随机的最终旋转角度 (3-5圈 + 随机角度)
+                const spinAngle = 1080 + Math.floor(Math.random() * 360); // 1080度是3圈
+
+                // 应用旋转
+                wheel.style.transform = `rotate(${spinAngle}deg)`;
+
+                // 等待旋转动画结束
+                setTimeout(() => {
+                    isSpinning = false;
+                    if (chances > 0) {
+                        spinBtn.disabled = false;
+                    }
+                    
+                    // 计算最终指向的奖品
+                    const prize = getPrize(spinAngle);
+                    
+                    // 显示结果弹窗
+                    prizeResult.textContent = prize;
+                    resultModal.classList.add('active');
+
+                }, 4000); // 等待4秒，与CSS中的transition时间一致
+            });
+
+            closeModalBtn.addEventListener('click', () => {
+                resultModal.classList.remove('active');
+            });
+        });
+    </script>
+
+</body>
+</html>
